@@ -1131,8 +1131,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         """
         from statsmodels.stats.stattools import jarque_bera
+        d = self.loglikelihood_burn
         return np.array(jarque_bera(
-            self.standardized_forecasts_error[:, self.loglikelihood_burn:],
+            self.filter_results.standardized_forecasts_error[:, d:],
             axis=1
         )).transpose()
 
@@ -1216,14 +1217,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         """
         # Store some values
-        squared_resid = self.standardized_forecasts_error**2
+        squared_resid = self.filter_results.standardized_forecasts_error**2
         d = self.loglikelihood_burn
         h = np.round((self.nobs - d) / 3)
 
         # Calculate the test statistics for each endogenous variable
         test_statistics = np.array([
             np.sum(squared_resid[i][-h:]) / np.sum(squared_resid[i][d:d+h])
-            for i in range(self.k_endog)
+            for i in range(self.model.k_endog)
         ])
 
         # Setup functions to calculate the p-values
@@ -1296,11 +1297,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         """
         from statsmodels.stats.diagnostic import acorr_ljungbox
+        d = self.loglikelihood_burn
         return np.c_[[
             acorr_ljungbox(
-                self.standardized_forecasts_error[i][self.loglikelihood_burn:]
+                self.filter_results.standardized_forecasts_error[i][d:]
             )
-            for i in range(self.k_endog)
+            for i in range(self.model.k_endog)
         ]]
 
     def predict(self, start=None, end=None, dynamic=False, full_results=False,
@@ -1439,8 +1441,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         _ = _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         # Eliminate residuals associated with burned likelihoods
-        resid = self.standardized_forecasts_error[variable,
-                                                  self.loglikelihood_burn:]
+        d = self.loglikelihood_burn
+        resid = self.filter_results.standardized_forecasts_error[variable, d:]
 
         # Top-left: residuals vs time
         ax = fig.add_subplot(221)
